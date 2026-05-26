@@ -70,6 +70,9 @@ export interface Candidate {
   ai_score: number | null
   ai_summary: string
   ai_verdict: string
+  ai_strengths: string[]
+  ai_gaps: string[]
+  ai_interview_questions: string[]
   ai_evaluated_at: string | null
   activities: CandidateActivity[]
   created_at: string

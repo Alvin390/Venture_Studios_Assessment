@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Candidate, PaginatedResponse, CandidateStage } from '@/types'
+import type { Candidate, PaginatedResponse, CandidateStage, AIEvaluationResult } from '@/types'
 import toast from 'react-hot-toast'
 
 export const CANDIDATE_KEYS = {
@@ -94,6 +94,21 @@ export function useMoveStage() {
     },
     onError: () => {
       toast.error('Failed to move candidate. Try again.')
+    },
+  })
+}
+
+export function useEvaluateCandidate(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post<AIEvaluationResult>(`/candidates/${id}/evaluate/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CANDIDATE_KEYS.detail(id) })
+      toast.success('AI evaluation complete.')
+    },
+    onError: () => {
+      toast.error('Evaluation failed. Please try again.')
     },
   })
 }

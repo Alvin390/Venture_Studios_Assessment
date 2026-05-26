@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Linkedin, ExternalLink, Mail, Phone,
-  Edit2, CheckCircle2, Clock, ChevronRight
+  Edit2, Sparkles, Clock, ChevronRight, CheckCircle, XCircle, HelpCircle
 } from 'lucide-react'
-import { useCandidate, useUpdateCandidate, useMoveStage } from '@/hooks/useCandidates'
+import { useCandidate, useUpdateCandidate, useMoveStage, useEvaluateCandidate } from '@/hooks/useCandidates'
 import { useJobs } from '@/hooks/useJobs'
 import { StageBadge, ScoreBadge } from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
@@ -64,6 +64,7 @@ export default function CandidateDetailPage() {
   const { data: jobsData } = useJobs()
   const updateCandidate = useUpdateCandidate(id!)
   const moveStage = useMoveStage()
+  const evaluate = useEvaluateCandidate(id!)
 
   const [editOpen, setEditOpen] = useState(false)
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', linkedin_url: '', cv_url: '', notes: '', job: '' })
@@ -242,37 +243,94 @@ export default function CandidateDetailPage() {
           )}
         </div>
 
-        {/* AI Evaluation summary */}
+        {/* AI Evaluation */}
         <div className="lg:col-span-2 bg-surface-raised border border-surface-border rounded-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider">AI Evaluation</h2>
+            <Button
+              size="sm"
+              variant="ghost"
+              leftIcon={<Sparkles size={12} />}
+              onClick={() => evaluate.mutate()}
+              loading={evaluate.isPending}
+            >
+              {candidate.ai_score !== null ? 'Re-run' : 'Evaluate'}
+            </Button>
           </div>
-          {candidate.ai_score !== null ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <ScoreBadge score={candidate.ai_score} />
-                <span className="text-sm font-semibold text-text-primary">{candidate.ai_verdict}</span>
-              </div>
-              <p className="text-sm text-text-secondary">{candidate.ai_summary}</p>
-              <p className="text-xs text-text-muted">{formatDate(candidate.ai_evaluated_at)}</p>
-              <button
-                onClick={() => navigate(`/candidates/${candidate.id}#evaluate`)}
-                className="text-xs text-accent hover:text-accent-light transition-colors"
-              >
-                Re-evaluate
-              </button>
+
+          {evaluate.isPending && (
+            <div className="flex flex-col items-center py-6 gap-2">
+              <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-text-muted">Analyzing candidate...</p>
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-text-muted mb-3">Not yet evaluated.</p>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => navigate(`/candidates/${candidate.id}#evaluate`)}
-                leftIcon={<CheckCircle2 size={13} />}
-              >
-                Evaluate with AI
-              </Button>
+          )}
+
+          {!evaluate.isPending && candidate.ai_score !== null ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <ScoreBadge score={candidate.ai_score} />
+                <span className="text-sm font-semibold text-text-primary capitalize">
+                  {candidate.ai_verdict.replace('_', ' ')}
+                </span>
+              </div>
+
+              <p className="text-sm text-text-secondary leading-relaxed">{candidate.ai_summary}</p>
+
+              {candidate.ai_strengths.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-1.5">Strengths</p>
+                  <ul className="space-y-1">
+                    {candidate.ai_strengths.map((s, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-text-secondary">
+                        <CheckCircle size={11} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {candidate.ai_gaps.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-1.5">Gaps</p>
+                  <ul className="space-y-1">
+                    {candidate.ai_gaps.map((g, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-text-secondary">
+                        <XCircle size={11} className="text-rose-400 mt-0.5 flex-shrink-0" />
+                        {g}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {candidate.ai_interview_questions.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-1.5">Suggested Questions</p>
+                  <ul className="space-y-1.5">
+                    {candidate.ai_interview_questions.map((q, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-text-secondary">
+                        <HelpCircle size={11} className="text-accent mt-0.5 flex-shrink-0" />
+                        {q}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-[10px] text-text-muted pt-1 border-t border-surface-border">
+                Evaluated {formatDate(candidate.ai_evaluated_at)}
+              </p>
+            </div>
+          ) : !evaluate.isPending && (
+            <div className="text-center py-6">
+              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                <Sparkles size={16} className="text-accent" />
+              </div>
+              <p className="text-sm text-text-secondary font-medium mb-1">Not yet evaluated</p>
+              <p className="text-xs text-text-muted">
+                Run an AI evaluation to get a fit score, strengths, gaps, and interview questions.
+              </p>
             </div>
           )}
         </div>

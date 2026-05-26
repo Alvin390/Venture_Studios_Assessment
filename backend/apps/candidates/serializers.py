@@ -25,13 +25,16 @@ class CandidateSerializer(serializers.ModelSerializer):
             "full_name", "email", "phone",
             "linkedin_url", "cv_url",
             "stage", "notes",
-            "ai_score", "ai_summary", "ai_verdict", "ai_evaluated_at",
+            "ai_score", "ai_summary", "ai_verdict",
+            "ai_strengths", "ai_gaps", "ai_interview_questions",
+            "ai_evaluated_at",
             "created_at", "updated_at",
             "activities",
         ]
         read_only_fields = [
             "id", "owner", "ai_score", "ai_summary",
-            "ai_verdict", "ai_evaluated_at", "created_at", "updated_at",
+            "ai_verdict", "ai_strengths", "ai_gaps", "ai_interview_questions",
+            "ai_evaluated_at", "created_at", "updated_at",
         ]
 
     def get_job_title(self, obj):

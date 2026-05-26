@@ -114,6 +114,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/min",
         "user": "200/min",
+        "ai_evaluate": "20/day",
     },
 }
 
