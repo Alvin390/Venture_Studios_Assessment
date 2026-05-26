@@ -7,6 +7,7 @@ import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { formatDate } from '@/lib/utils'
+import type { Candidate } from '@/types'
 
 interface StatCardProps {
   label: string
@@ -122,7 +123,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {(stats.recent_candidates as Candidate[]).map((c) => (
+                {stats.recent_candidates.map((c: Candidate) => (
                   <tr
                     key={c.id}
                     className="border-b border-surface-border last:border-0 hover:bg-surface-overlay cursor-pointer transition-colors"

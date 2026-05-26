@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Linkedin, ExternalLink, Mail, Phone,
-  Edit2, Sparkles, Clock, ChevronRight, CheckCircle, XCircle, HelpCircle
+  Edit2, Sparkles, Clock, ChevronRight,
+  CheckCircle, XCircle, HelpCircle,
 } from 'lucide-react'
 import { useCandidate, useUpdateCandidate, useMoveStage, useEvaluateCandidate } from '@/hooks/useCandidates'
 import { useJobs } from '@/hooks/useJobs'
