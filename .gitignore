@@ -56,3 +56,6 @@ PROMPT.txt
 Assessment instructions.txt
 FIXES REQUIRED.txt
 plan/
+
+# ---- Local setup guide (contains personal notes, not for repo) ----
+ENV_SETUP.md
