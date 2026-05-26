@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from supabase import create_client
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, OpenApiExample
 
 from config.permissions import IsAuthenticated, IsAdmin
 from .models import Profile
@@ -13,17 +14,28 @@ logger = logging.getLogger(__name__)
 
 
 def get_supabase_admin():
-    """Returns a Supabase client with service role key for admin operations."""
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
 class MeView(APIView):
-    """Returns the authenticated user's profile."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get current user profile",
+        description="Returns the profile of the authenticated user.",
+        tags=["Auth"],
+        responses={200: ProfileSerializer},
+    )
     def get(self, request):
         return Response(ProfileSerializer(request.profile).data)
 
+    @extend_schema(
+        summary="Update current user profile",
+        description="Update `full_name` and/or `company` for the authenticated user.",
+        tags=["Auth"],
+        request=ProfileUpdateSerializer,
+        responses={200: ProfileSerializer},
+    )
     def patch(self, request):
         serializer = ProfileUpdateSerializer(
             request.profile, data=request.data, partial=True
@@ -34,13 +46,28 @@ class MeView(APIView):
 
 
 class AccountListCreateView(APIView):
-    """Admin: list all accounts or create a new one."""
     permission_classes = [IsAdmin]
 
+    @extend_schema(
+        summary="List all accounts",
+        description="Admin only. Returns every profile in the system.",
+        tags=["Admin - Accounts"],
+        responses={200: ProfileSerializer(many=True)},
+    )
     def get(self, request):
         profiles = Profile.objects.all().order_by("-created_at")
         return Response(ProfileSerializer(profiles, many=True).data)
 
+    @extend_schema(
+        summary="Create a new account",
+        description=(
+            "Admin only. Creates a Supabase Auth user and a matching Profile row. "
+            "The email is confirmed automatically."
+        ),
+        tags=["Admin - Accounts"],
+        request=AccountCreateSerializer,
+        responses={201: ProfileSerializer},
+    )
     def post(self, request):
         serializer = AccountCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -74,7 +101,6 @@ class AccountListCreateView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Upsert profile - the Supabase trigger may have already created it
         profile, _ = Profile.objects.update_or_create(
             id=supabase_user.id,
             defaults={
@@ -90,7 +116,6 @@ class AccountListCreateView(APIView):
 
 
 class AccountDetailView(APIView):
-    """Admin: retrieve, update, or deactivate a specific account."""
     permission_classes = [IsAdmin]
 
     def _get_profile(self, pk):
@@ -99,12 +124,25 @@ class AccountDetailView(APIView):
         except Profile.DoesNotExist:
             return None
 
+    @extend_schema(
+        summary="Get account by ID",
+        description="Admin only. Returns a specific user profile.",
+        tags=["Admin - Accounts"],
+        responses={200: ProfileSerializer, 404: None},
+    )
     def get(self, request, pk):
         profile = self._get_profile(pk)
         if not profile:
             return Response({"error": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(ProfileSerializer(profile).data)
 
+    @extend_schema(
+        summary="Update account",
+        description="Admin only. Update full_name or company for any user.",
+        tags=["Admin - Accounts"],
+        request=ProfileUpdateSerializer,
+        responses={200: ProfileSerializer, 404: None},
+    )
     def patch(self, request, pk):
         profile = self._get_profile(pk)
         if not profile:
@@ -114,6 +152,12 @@ class AccountDetailView(APIView):
         serializer.save()
         return Response(ProfileSerializer(profile).data)
 
+    @extend_schema(
+        summary="Deactivate account",
+        description="Admin only. Soft-deletes the account by setting `is_active = false`. Cannot deactivate your own account.",
+        tags=["Admin - Accounts"],
+        responses={204: None, 400: None, 404: None},
+    )
     def delete(self, request, pk):
         profile = self._get_profile(pk)
         if not profile:
@@ -129,12 +173,39 @@ class AccountDetailView(APIView):
 
 
 class DashboardStatsView(APIView):
-    """
-    Returns aggregated counts for the dashboard.
-    Admins get global counts; customers get their own counts.
-    """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get dashboard stats",
+        description=(
+            "Returns aggregated counts for the dashboard. "
+            "Admins get global totals; customers get only their own data. "
+            "Use `?as_user=<id>` (admin only) to get stats for a specific customer."
+        ),
+        tags=["Auth"],
+        parameters=[
+            OpenApiParameter(
+                "as_user",
+                OpenApiTypes.UUID,
+                description="Admin only: return stats scoped to this customer profile.",
+                required=False,
+            )
+        ],
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "total_jobs": {"type": "integer"},
+                    "open_jobs": {"type": "integer"},
+                    "total_candidates": {"type": "integer"},
+                    "hired_count": {"type": "integer"},
+                    "in_interview": {"type": "integer"},
+                    "in_offer": {"type": "integer"},
+                    "recent_candidates": {"type": "array", "items": {}},
+                },
+            }
+        },
+    )
     def get(self, request):
         from django.db.models import Count, Q
         from apps.jobs.models import Job
@@ -158,7 +229,6 @@ class DashboardStatsView(APIView):
             in_offer=Count("id", filter=Q(stage="offer")),
         )
 
-        # Recent candidates (last 8)
         from apps.candidates.serializers import CandidateListSerializer
         recent_qs = (
             Candidate.objects.filter(**candidate_filter)

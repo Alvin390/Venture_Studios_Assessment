@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 
 from config.permissions import IsAuthenticated
 from config.utils import get_effective_profile
@@ -13,6 +14,32 @@ class CandidateEvaluateView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [AIEvaluateThrottle]
 
+    @extend_schema(
+        summary="Run AI evaluation on a candidate",
+        description=(
+            "Calls Gemini 2.0 Flash Lite with candidate and job details. "
+            "Returns a score (0-100), verdict, summary, strengths, gaps, and suggested interview questions. "
+            "Results are persisted on the candidate. **Rate limited to 20 calls per user per day.**"
+        ),
+        tags=["AI"],
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                    "verdict": {"type": "string", "enum": ["strong_yes", "yes", "maybe", "no"]},
+                    "summary": {"type": "string"},
+                    "strengths": {"type": "array", "items": {"type": "string"}},
+                    "gaps": {"type": "array", "items": {"type": "string"}},
+                    "interview_questions": {"type": "array", "items": {"type": "string"}},
+                    "evaluated_at": {"type": "string", "format": "date-time"},
+                },
+            },
+            404: None,
+            503: None,
+        },
+    )
     def post(self, request, pk):
         profile = get_effective_profile(request)
 
@@ -41,14 +68,9 @@ class CandidateEvaluateView(APIView):
         candidate.ai_evaluated_at = timezone.now()
         candidate.save(
             update_fields=[
-                "ai_score",
-                "ai_summary",
-                "ai_verdict",
-                "ai_strengths",
-                "ai_gaps",
-                "ai_interview_questions",
-                "ai_evaluated_at",
-                "updated_at",
+                "ai_score", "ai_summary", "ai_verdict",
+                "ai_strengths", "ai_gaps", "ai_interview_questions",
+                "ai_evaluated_at", "updated_at",
             ]
         )
 

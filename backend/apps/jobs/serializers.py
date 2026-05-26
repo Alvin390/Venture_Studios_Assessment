@@ -15,7 +15,7 @@ class JobSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "owner", "created_at", "updated_at"]
 
-    def get_owner_name(self, obj):
+    def get_owner_name(self, obj) -> str:
         return obj.owner.full_name if obj.owner_id else ""
 
 

@@ -10,7 +10,7 @@ class CandidateActivitySerializer(serializers.ModelSerializer):
         model = CandidateActivity
         fields = ["id", "action", "actor_name", "metadata", "created_at"]
 
-    def get_actor_name(self, obj):
+    def get_actor_name(self, obj) -> str:
         return obj.actor.full_name if obj.actor_id else "System"
 
 
@@ -37,7 +37,7 @@ class CandidateSerializer(serializers.ModelSerializer):
             "ai_evaluated_at", "created_at", "updated_at",
         ]
 
-    def get_job_title(self, obj):
+    def get_job_title(self, obj) -> str | None:
         return obj.job.title if obj.job_id else None
 
 
@@ -55,7 +55,7 @@ class CandidateListSerializer(serializers.ModelSerializer):
             "created_at", "updated_at",
         ]
 
-    def get_job_title(self, obj):
+    def get_job_title(self, obj) -> str | None:
         return obj.job.title if obj.job_id else None
 
 
@@ -73,7 +73,7 @@ class KanbanCandidateSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-    def get_job_title(self, obj):
+    def get_job_title(self, obj) -> str | None:
         return obj.job.title if obj.job_id else None
 
 

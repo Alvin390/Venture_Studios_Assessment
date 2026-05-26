@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from django.utils.timezone import now
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from config.permissions import IsAuthenticated
 from config.utils import get_effective_profile
@@ -27,7 +28,6 @@ ALL_STAGES = [
 
 
 def _base_qs(profile):
-    """All candidates visible to this profile, with related data pre-fetched."""
     qs = Candidate.objects.select_related("job", "owner")
     if not profile.is_admin:
         qs = qs.filter(owner=profile)
@@ -60,11 +60,30 @@ class CandidateListCreateView(APIView):
 
         return qs.order_by("-created_at")
 
+    @extend_schema(
+        summary="List candidates",
+        description="Returns candidates visible to the caller with optional filters.",
+        tags=["Candidates"],
+        parameters=[
+            OpenApiParameter("job_id", OpenApiTypes.UUID, description="Filter by job ID.", required=False),
+            OpenApiParameter("stage", OpenApiTypes.STR, enum=["applied", "screening", "interview", "technical", "offer", "hired", "rejected"], required=False),
+            OpenApiParameter("search", OpenApiTypes.STR, description="Filter by name or email.", required=False),
+            OpenApiParameter("as_user", OpenApiTypes.UUID, description="Admin only: scope to a specific customer.", required=False),
+        ],
+        responses={200: CandidateListSerializer(many=True)},
+    )
     def get(self, request):
         qs = self._build_queryset(request)
         serializer = CandidateListSerializer(qs, many=True)
         return Response({"count": qs.count(), "results": serializer.data})
 
+    @extend_schema(
+        summary="Add a candidate",
+        description="Creates a new candidate and logs an `created` activity.",
+        tags=["Candidates"],
+        request=CandidateWriteSerializer,
+        responses={201: CandidateSerializer},
+    )
     def post(self, request):
         effective = get_effective_profile(request)
         serializer = CandidateWriteSerializer(data=request.data)
@@ -100,12 +119,25 @@ class CandidateDetailView(APIView):
             return None
         return candidate
 
+    @extend_schema(
+        summary="Get a candidate",
+        description="Returns full candidate detail including activities and AI evaluation results.",
+        tags=["Candidates"],
+        responses={200: CandidateSerializer, 404: None},
+    )
     def get(self, request, pk):
         candidate = self._get_candidate(request, pk)
         if not candidate:
             return Response({"error": "Candidate not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(CandidateSerializer(candidate).data)
 
+    @extend_schema(
+        summary="Update a candidate",
+        description="Partial update. Updating `notes` logs a `note_added` activity.",
+        tags=["Candidates"],
+        request=CandidateWriteSerializer,
+        responses={200: CandidateSerializer, 404: None},
+    )
     def patch(self, request, pk):
         candidate = self._get_candidate(request, pk)
         if not candidate:
@@ -128,6 +160,11 @@ class CandidateDetailView(APIView):
         candidate.refresh_from_db()
         return Response(CandidateSerializer(candidate).data)
 
+    @extend_schema(
+        summary="Delete a candidate",
+        tags=["Candidates"],
+        responses={204: None, 404: None},
+    )
     def delete(self, request, pk):
         candidate = self._get_candidate(request, pk)
         if not candidate:
@@ -139,6 +176,16 @@ class CandidateDetailView(APIView):
 class CandidateStageMoveView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Move candidate to a new stage",
+        description=(
+            "Updates the candidate's pipeline stage and logs a `stage_change` activity "
+            "with `{from, to}` metadata. No-op if the stage is unchanged."
+        ),
+        tags=["Candidates"],
+        request=StageUpdateSerializer,
+        responses={200: CandidateListSerializer, 404: None},
+    )
     def patch(self, request, pk):
         try:
             candidate = Candidate.objects.select_related("job", "owner").get(pk=pk)
@@ -173,6 +220,35 @@ class CandidateStageMoveView(APIView):
 class KanbanView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get kanban board",
+        description=(
+            "Returns all candidates grouped by stage in a single query. "
+            "Structure: `{stages: {stage_name: {count, candidates[]}}}`."
+        ),
+        tags=["Candidates"],
+        parameters=[
+            OpenApiParameter("job_id", OpenApiTypes.UUID, description="Filter all columns by job.", required=False),
+            OpenApiParameter("as_user", OpenApiTypes.UUID, description="Admin only: scope to a specific customer.", required=False),
+        ],
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "stages": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                                "count": {"type": "integer"},
+                                "candidates": {"type": "array", "items": {}},
+                            },
+                        },
+                    }
+                },
+            }
+        },
+    )
     def get(self, request):
         effective = get_effective_profile(request)
 
@@ -184,7 +260,6 @@ class KanbanView(APIView):
         if job_id:
             qs = qs.filter(job_id=job_id)
 
-        # Single DB query - group in Python (fast enough for any realistic ATS dataset)
         all_candidates = list(qs.order_by("created_at"))
         serialized = KanbanCandidateSerializer(all_candidates, many=True).data
 

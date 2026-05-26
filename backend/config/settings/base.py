@@ -24,6 +24,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
@@ -141,6 +142,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "EXCEPTION_HANDLER": "config.exceptions.custom_exception_handler",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
@@ -150,6 +152,30 @@ REST_FRAMEWORK = {
         "user": "200/min",
         "ai_evaluate": "20/day",
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "TalentFlow API",
+    "DESCRIPTION": (
+        "REST API for the TalentFlow applicant tracking system.\n\n"
+        "All protected endpoints require a Supabase JWT in the "
+        "`Authorization: Bearer <token>` header. Tokens are issued by Supabase Auth."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Supabase JWT. Sign in via Supabase Auth to obtain one.",
+            }
+        }
+    },
+    "SECURITY": [{"BearerAuth": []}],
 }
 
 CORS_ALLOWED_ORIGINS = os.environ.get(

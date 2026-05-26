@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Count, Q
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from config.permissions import IsAuthenticated
 from config.utils import get_effective_profile
@@ -10,7 +11,6 @@ from .serializers import JobSerializer, JobWriteSerializer
 
 
 def _annotated_job(pk):
-    """Fetch a single job with candidate_count annotation."""
     return Job.objects.annotate(candidate_count=Count("candidates")).select_related("owner").get(pk=pk)
 
 
@@ -21,7 +21,6 @@ class JobListCreateView(APIView):
         effective = get_effective_profile(request)
         qs = Job.objects.annotate(candidate_count=Count("candidates")).select_related("owner")
 
-        # Admins see all jobs unless they are impersonating a specific user
         if not request.profile.is_admin or request.query_params.get("as_user"):
             qs = qs.filter(owner=effective)
 
@@ -37,11 +36,32 @@ class JobListCreateView(APIView):
 
         return qs.order_by("-created_at")
 
+    @extend_schema(
+        summary="List jobs",
+        description=(
+            "Returns jobs visible to the caller. Customers see only their own jobs; "
+            "admins see all unless `?as_user` is set."
+        ),
+        tags=["Jobs"],
+        parameters=[
+            OpenApiParameter("status", OpenApiTypes.STR, enum=["open", "closed", "draft"], required=False),
+            OpenApiParameter("search", OpenApiTypes.STR, description="Filter by title or department.", required=False),
+            OpenApiParameter("as_user", OpenApiTypes.UUID, description="Admin only: scope to a specific customer.", required=False),
+        ],
+        responses={200: JobSerializer(many=True)},
+    )
     def get(self, request):
         qs = self._build_queryset(request)
         serializer = JobSerializer(qs, many=True)
         return Response({"count": qs.count(), "results": serializer.data})
 
+    @extend_schema(
+        summary="Create a job",
+        description="Creates a new job posting owned by the authenticated user (or the impersonated user).",
+        tags=["Jobs"],
+        request=JobWriteSerializer,
+        responses={201: JobSerializer},
+    )
     def post(self, request):
         effective = get_effective_profile(request)
         serializer = JobWriteSerializer(data=request.data)
@@ -65,12 +85,25 @@ class JobDetailView(APIView):
             return None
         return job
 
+    @extend_schema(
+        summary="Get a job",
+        description="Returns a single job. Customers can only access their own jobs.",
+        tags=["Jobs"],
+        responses={200: JobSerializer, 404: None},
+    )
     def get(self, request, pk):
         job = self._get_job(request, pk)
         if not job:
             return Response({"error": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(JobSerializer(job).data)
 
+    @extend_schema(
+        summary="Update a job",
+        description="Partial update. Customers can only edit their own jobs.",
+        tags=["Jobs"],
+        request=JobWriteSerializer,
+        responses={200: JobSerializer, 404: None},
+    )
     def patch(self, request, pk):
         job = self._get_job(request, pk)
         if not job:
@@ -80,6 +113,12 @@ class JobDetailView(APIView):
         serializer.save()
         return Response(JobSerializer(_annotated_job(job.pk)).data)
 
+    @extend_schema(
+        summary="Delete a job",
+        description="Deletes a job. Candidates attached to it lose the job reference but are not deleted.",
+        tags=["Jobs"],
+        responses={204: None, 404: None},
+    )
     def delete(self, request, pk):
         job = self._get_job(request, pk)
         if not job:
