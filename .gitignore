@@ -1,0 +1,58 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# ---- Django ----
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+
+# ---- Environment variables ----
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# ---- Node ----
+node_modules/
+dist/
+.cache/
+*.local
+dist-ssr/
+coverage/
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---- Assessment files (internal only) ----
+PROMPT.txt
+Assessment instructions.txt
+FIXES REQUIRED.txt
+plan/

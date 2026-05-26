@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(python -m venv venv)",
+      "Bash(venv\\\\Scripts\\\\pip install *)",
+      "Bash(./venv/Scripts/pip install *)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(./venv/Scripts/django-admin startproject *)",
+      "Bash(mkdir -p apps/accounts apps/jobs apps/candidates apps/ai_evaluation)",
+      "Bash(touch apps/__init__.py apps/accounts/__init__.py apps/jobs/__init__.py apps/candidates/__init__.py apps/ai_evaluation/__init__.py)",
+      "Bash(./venv/Scripts/python -m django startapp accounts apps/accounts)",
+      "Bash(./venv/Scripts/python -m django startapp jobs apps/jobs)",
+      "Bash(./venv/Scripts/python -m django startapp candidates apps/candidates)",
+      "Bash(./venv/Scripts/python -m django startapp ai_evaluation apps/ai_evaluation)",
+      "Bash(rm -rf apps)",
+      "Bash(mkdir apps *)",
+      "Bash(touch apps/__init__.py)",
+      "Bash(npx tailwindcss *)",
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings.development ./venv/Scripts/python manage.py check)",
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings.development ./venv/Scripts/python manage.py makemigrations)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
