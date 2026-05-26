@@ -126,3 +126,54 @@ class AccountDetailView(APIView):
         profile.is_active = False
         profile.save(update_fields=["is_active", "updated_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DashboardStatsView(APIView):
+    """
+    Returns aggregated counts for the dashboard.
+    Admins get global counts; customers get their own counts.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count, Q
+        from apps.jobs.models import Job
+        from apps.candidates.models import Candidate
+        from config.utils import get_effective_profile
+
+        effective = get_effective_profile(request)
+
+        job_filter = {} if request.profile.is_admin and not request.query_params.get("as_user") else {"owner": effective}
+        candidate_filter = {} if request.profile.is_admin and not request.query_params.get("as_user") else {"owner": effective}
+
+        job_stats = Job.objects.filter(**job_filter).aggregate(
+            total=Count("id"),
+            open=Count("id", filter=Q(status="open")),
+        )
+
+        candidate_stats = Candidate.objects.filter(**candidate_filter).aggregate(
+            total=Count("id"),
+            hired=Count("id", filter=Q(stage="hired")),
+            in_interview=Count("id", filter=Q(stage="interview")),
+            in_offer=Count("id", filter=Q(stage="offer")),
+        )
+
+        # Recent candidates (last 8)
+        from apps.candidates.serializers import CandidateListSerializer
+        recent_qs = (
+            Candidate.objects.filter(**candidate_filter)
+            .select_related("job", "owner")
+            .order_by("-created_at")[:8]
+        )
+
+        return Response(
+            {
+                "total_jobs": job_stats["total"] or 0,
+                "open_jobs": job_stats["open"] or 0,
+                "total_candidates": candidate_stats["total"] or 0,
+                "hired_count": candidate_stats["hired"] or 0,
+                "in_interview": candidate_stats["in_interview"] or 0,
+                "in_offer": candidate_stats["in_offer"] or 0,
+                "recent_candidates": CandidateListSerializer(recent_qs, many=True).data,
+            }
+        )
