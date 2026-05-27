@@ -15,7 +15,7 @@ class Profile(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_CUSTOMER)
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    company = models.CharField(max_length=255, blank=True)
+    company = models.CharField(max_length=255, blank=True, default="")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
