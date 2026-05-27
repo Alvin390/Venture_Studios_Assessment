@@ -58,7 +58,7 @@ DB_HOST=aws-0-<region>.pooler.supabase.com
 DB_PORT=6543
 
 GEMINI_API_KEY=<your-gemini-api-key>
-GEMINI_MODEL=gemini-2.0-flash-lite
+GEMINI_MODEL=gemini-2.0-flash
 
 DJANGO_LOG_LEVEL=WARNING
 ```
@@ -202,7 +202,7 @@ After adding a custom domain, update:
 | `DB_HOST` | Yes | Supabase pooler host |
 | `DB_PORT` | Yes | `6543` |
 | `GEMINI_API_KEY` | Yes | Google AI Studio key |
-| `GEMINI_MODEL` | No | Defaults to `gemini-2.0-flash-lite` |
+| `GEMINI_MODEL` | No | Defaults to `gemini-2.0-flash` |
 | `DJANGO_LOG_LEVEL` | No | Defaults to `WARNING` |
 
 ### Frontend (Vercel)
