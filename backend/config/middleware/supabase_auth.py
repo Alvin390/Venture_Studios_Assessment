@@ -43,8 +43,13 @@ def _get_profile(request):
         return Profile.objects.select_related().get(id=user_id)
 
     except jwt.ExpiredSignatureError:
+        logger.warning("JWT validation failed: token expired")
         return None
-    except jwt.InvalidTokenError:
+    except jwt.InvalidSignatureError:
+        logger.warning("JWT validation failed: invalid signature - check SUPABASE_JWT_SECRET in .env")
+        return None
+    except jwt.InvalidTokenError as exc:
+        logger.warning("JWT validation failed: %s", type(exc).__name__)
         return None
     except Profile.DoesNotExist:
         # Valid token but profile not synced yet

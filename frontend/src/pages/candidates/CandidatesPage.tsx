@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { UserPlus, Users, Search, Link2, ExternalLink } from 'lucide-react'
+import { UserPlus, Users, Search, Link2, ExternalLink, Upload, CheckCircle2, Loader2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useCandidates, useCreateCandidate, useDeleteCandidate } from '@/hooks/useCandidates'
 import { useJobs } from '@/hooks/useJobs'
 import { StageBadge, ScoreBadge } from '@/components/ui/Badge'
@@ -14,7 +15,7 @@ import EmptyState from '@/components/shared/EmptyState'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import PageHeader from '@/components/shared/PageHeader'
 import { SkeletonRow } from '@/components/ui/Skeleton'
-import { formatDate } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api'
 import type { Candidate, CandidateStage } from '@/types'
 import { ALL_STAGES } from '@/types'
@@ -43,6 +44,12 @@ export default function CandidatesPage() {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<Partial<FormState>>({})
 
+  const [cvMode, setCvMode] = useState<'url' | 'file'>('url')
+  const [cvUploading, setCvUploading] = useState(false)
+  const [cvFileName, setCvFileName] = useState('')
+  const [cvUploadError, setCvUploadError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const { data, isLoading } = useCandidates({
     job_id: jobFilter,
     stage: stageFilter,
@@ -58,6 +65,26 @@ export default function CandidatesPage() {
     window._searchTimer = setTimeout(() => setDebouncedSearch(val), 300)
   }, [])
 
+  async function handleCvUpload(file: File) {
+    setCvUploading(true)
+    setCvUploadError('')
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('candidate-cvs')
+        .upload(path, file, { upsert: false })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('candidate-cvs').getPublicUrl(path)
+      setForm((f) => ({ ...f, cv_url: urlData.publicUrl }))
+      setCvFileName(file.name)
+    } catch {
+      setCvUploadError('Upload failed. Make sure the candidate-cvs bucket exists in Supabase Storage.')
+    } finally {
+      setCvUploading(false)
+    }
+  }
+
   function validate() {
     const e: Partial<FormState> = {}
     if (!form.full_name.trim()) e.full_name = 'Name is required.'
@@ -68,12 +95,11 @@ export default function CandidatesPage() {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
     try {
-      await createCandidate.mutateAsync({
-        ...form,
-        job: form.job || null,
-      })
+      await createCandidate.mutateAsync({ ...form, job: form.job || null })
       setPanelOpen(false)
       setForm(EMPTY)
+      setCvMode('url')
+      setCvFileName('')
     } catch (err) {
       setErrors({ full_name: getErrorMessage(err) })
     }
@@ -95,7 +121,7 @@ export default function CandidatesPage() {
         title="Candidates"
         description="All candidates across your hiring pipeline."
         actions={
-          <Button leftIcon={<UserPlus size={15} />} onClick={() => { setForm(EMPTY); setPanelOpen(true) }}>
+          <Button leftIcon={<UserPlus size={15} />} onClick={() => { setForm(EMPTY); setCvMode('url'); setCvFileName(''); setPanelOpen(true) }}>
             Add Candidate
           </Button>
         }
@@ -250,12 +276,93 @@ export default function CandidatesPage() {
             value={form.linkedin_url}
             onChange={(e) => setForm((f) => ({ ...f, linkedin_url: e.target.value }))}
           />
-          <Input
-            label="CV / Resume URL"
-            placeholder="https://drive.google.com/..."
-            value={form.cv_url}
-            onChange={(e) => setForm((f) => ({ ...f, cv_url: e.target.value }))}
-          />
+
+          {/* CV field with URL / Upload toggle */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-text-secondary">CV / Resume</label>
+              <div className="flex rounded-md overflow-hidden border border-surface-border text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCvMode('url')}
+                  className={cn(
+                    'px-2.5 py-1 transition-colors',
+                    cvMode === 'url'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-secondary'
+                  )}
+                >
+                  Paste URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCvMode('file')}
+                  className={cn(
+                    'px-2.5 py-1 transition-colors border-l border-surface-border',
+                    cvMode === 'file'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-secondary'
+                  )}
+                >
+                  Upload file
+                </button>
+              </div>
+            </div>
+
+            {cvMode === 'url' ? (
+              <Input
+                placeholder="https://drive.google.com/..."
+                value={form.cv_url}
+                onChange={(e) => setForm((f) => ({ ...f, cv_url: e.target.value }))}
+              />
+            ) : (
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCvUpload(file)
+                  }}
+                />
+                {cvFileName && !cvUploading ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-input border border-green-500/40 bg-green-500/10 text-sm text-green-400">
+                    <CheckCircle2 size={14} />
+                    <span className="truncate flex-1">{cvFileName}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setCvFileName(''); setForm((f) => ({ ...f, cv_url: '' })); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                      className="text-text-muted hover:text-text-secondary text-xs ml-1"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={cvUploading}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-input border border-dashed text-sm transition-colors',
+                      'border-surface-border text-text-muted hover:border-accent hover:text-accent',
+                      'disabled:opacity-60 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    {cvUploading
+                      ? <><Loader2 size={14} className="animate-spin" /> Uploading...</>
+                      : <><Upload size={14} /> Choose PDF, DOC, or DOCX</>
+                    }
+                  </button>
+                )}
+                {cvUploadError && (
+                  <p className="mt-1 text-xs text-rose-400">{cvUploadError}</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <Select
             label="Job"
             value={form.job}
