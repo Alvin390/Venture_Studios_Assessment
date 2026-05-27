@@ -48,10 +48,7 @@ Base your score on the information available. If CV/LinkedIn URLs are provided b
 
     response = model.generate_content(
         prompt,
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=1024,
-        ),
+        generation_config={"temperature": 0.3, "max_output_tokens": 1024},
     )
 
     text = response.text.strip()

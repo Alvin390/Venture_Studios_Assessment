@@ -1,7 +1,11 @@
+import logging
+
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
+
+logger = logging.getLogger(__name__)
 
 from config.permissions import IsAuthenticated
 from config.utils import get_effective_profile
@@ -54,6 +58,7 @@ class CandidateEvaluateView(APIView):
         try:
             result = evaluate_candidate(candidate, candidate.job)
         except Exception:
+            logger.exception("AI evaluation failed for candidate %s", pk)
             return Response(
                 {"error": "AI evaluation failed. Please try again later.", "code": "ai_error"},
                 status=503,
