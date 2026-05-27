@@ -1,3 +1,4 @@
+import os
 import sys
 from django.apps import AppConfig
 
@@ -17,6 +18,10 @@ class AccountsConfig(AppConfig):
         # Skip during management commands that don't benefit from the check
         cmd = sys.argv[1] if len(sys.argv) > 1 else ""
         if cmd in _SKIP_CHECK_COMMANDS:
+            return
+
+        # runserver starts a reloader process and a server process - only run in the server
+        if cmd == "runserver" and os.environ.get("RUN_MAIN") != "true":
             return
 
         # Skip when running under pytest

@@ -32,10 +32,12 @@ class Command(BaseCommand):
             host = settings.DATABASES["default"].get("HOST", "localhost")
             return {"service": "PostgreSQL (Supabase)", "ok": True, "ms": ms, "detail": f"host={host}"}
         except Exception as exc:
-            return {"service": "PostgreSQL (Supabase)", "ok": False, "ms": None, "detail": str(exc)[:80]}
+            db = settings.DATABASES["default"]
+            hint = f"user={db.get('USER', '?')} host={db.get('HOST', '?')}"
+            return {"service": "PostgreSQL (Supabase)", "ok": False, "ms": None, "detail": f"{hint} | {str(exc)[:60]}"}
 
     def _check_supabase_auth(self):
-        url = f"{settings.SUPABASE_URL}/auth/v1/settings"
+        url = f"{settings.SUPABASE_URL}/auth/v1/health"
         headers = {"apikey": settings.SUPABASE_ANON_KEY, "Authorization": f"Bearer {settings.SUPABASE_ANON_KEY}"}
         try:
             t = time.perf_counter()
