@@ -8,7 +8,8 @@ import AdminRoute from '@/components/shared/AdminRoute'
 import AppLayout from '@/components/layout/AppLayout'
 import PageSpinner from '@/components/shared/PageSpinner'
 
-const LoginPage       = lazy(() => import('@/pages/auth/LoginPage'))
+const LoginPage            = lazy(() => import('@/pages/auth/LoginPage'))
+const ResetPasswordPage    = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 const DashboardPage   = lazy(() => import('@/pages/dashboard/DashboardPage'))
 const JobsPage        = lazy(() => import('@/pages/jobs/JobsPage'))
 const CandidatesPage  = lazy(() => import('@/pages/candidates/CandidatesPage'))
@@ -24,6 +25,7 @@ export default function App() {
           <Suspense fallback={<PageSpinner />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
