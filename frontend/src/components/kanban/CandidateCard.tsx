@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Linkedin, GripVertical } from 'lucide-react'
+import { Link2, GripVertical } from 'lucide-react'
 import { cn, timeAgo, STAGE_COLORS } from '@/lib/utils'
 import { ScoreBadge } from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
@@ -76,7 +76,7 @@ export default function CandidateCard({
               onClick={(e) => e.stopPropagation()}
               className="text-text-muted hover:text-[#0A66C2] transition-colors"
             >
-              <Linkedin size={13} />
+              <Link2 size={13} />
             </a>
           )}
           {candidate.ai_score !== null && (

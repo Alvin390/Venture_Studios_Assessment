@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { UserPlus, Users, Search, Linkedin, ExternalLink } from 'lucide-react'
+import { UserPlus, Users, Search, Link2, ExternalLink } from 'lucide-react'
 import { useCandidates, useCreateCandidate, useDeleteCandidate } from '@/hooks/useCandidates'
 import { useJobs } from '@/hooks/useJobs'
 import { StageBadge, ScoreBadge } from '@/components/ui/Badge'
@@ -17,7 +17,8 @@ import { SkeletonRow } from '@/components/ui/Skeleton'
 import { formatDate } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api'
 import type { Candidate, CandidateStage } from '@/types'
-import { ALL_STAGES, STAGE_LABELS } from '@/types'
+import { ALL_STAGES } from '@/types'
+import { STAGE_LABELS } from '@/lib/utils'
 
 interface FormState {
   full_name: string; email: string; phone: string
@@ -175,7 +176,7 @@ export default function CandidatesPage() {
                               onClick={(e) => e.stopPropagation()}
                               className="text-text-muted hover:text-[#0A66C2] transition-colors"
                             >
-                              <Linkedin size={11} />
+                              <Link2 size={11} />
                             </a>
                           )}
                         </div>

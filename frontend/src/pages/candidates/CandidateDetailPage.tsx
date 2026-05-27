@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Linkedin, ExternalLink, Mail, Phone,
+  ArrowLeft, Link2, ExternalLink, Mail, Phone,
   Edit2, Sparkles, Clock, ChevronRight,
   CheckCircle, XCircle, HelpCircle,
 } from 'lucide-react'
@@ -162,7 +162,7 @@ export default function CandidateDetailPage() {
           )}
           {candidate.linkedin_url && (
             <a href={candidate.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-[#0A66C2] transition-colors">
-              <Linkedin size={13} /> LinkedIn
+              <Link2 size={13} /> LinkedIn
             </a>
           )}
           {candidate.cv_url && (
