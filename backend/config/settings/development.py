@@ -15,6 +15,7 @@ CORS_ALLOWED_ORIGINS = [
 REST_FRAMEWORK = {
     **REST_FRAMEWORK,
     "DEFAULT_THROTTLE_RATES": {
+        **REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"],
         "anon": "1000/min",
         "user": "1000/min",
     },
