@@ -59,7 +59,7 @@ def _verify_hs256(token: str, secret: str):
 def _verify_via_api(token: str):
     """Delegate token verification to Supabase Auth. Used as fallback for non-HS256 tokens."""
     try:
-        resp = _supabase_admin().auth.admin.get_user(token)
+        resp = _supabase_admin().auth.get_user(token)
         user = resp.user
         return {"sub": str(user.id)} if user else None
     except Exception as exc:
