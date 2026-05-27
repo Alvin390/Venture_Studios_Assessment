@@ -4,14 +4,16 @@
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, role, full_name, email, company, is_active)
+  INSERT INTO public.profiles (id, role, full_name, email, company, is_active, created_at, updated_at)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'role', 'customer'),
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'company', ''),
-    TRUE
+    TRUE,
+    now(),
+    now()
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
